@@ -20,7 +20,7 @@ class Manual(wx.Panel):
         self.spacing = 5
         
         self.button_Up = wx.Button(self, wx.ID_ANY, _("^"))
-        self.text_ctrl_Page = wx.TextCtrl(self, wx.ID_ANY, "")
+        self.staticTxt_Page = wx.StaticText(self, wx.ID_ANY, style = wx.ALIGN_CENTER_HORIZONTAL)
         self.button_Down = wx.Button(self, wx.ID_ANY, _("v"))
         
         
@@ -48,15 +48,15 @@ class Manual(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnButton_Page, self.button_Down)
 
     def __set_properties(self):
-        self.text_ctrl_Page.SetLabel("%s"%(self.currentPage))
+        #self.text_ctrl_Page.SetLabel("%s"%(self.currentPage))
+        self.staticTxt_Page.SetLabel("Bank: %s"%(self.currentPage))
         for button in self.buttonList:
             button.SetBackgroundColour(wx.NamedColour('YELLOW'))
 
     def __do_layout(self):
         sizer_Outer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Manual Fire")), wx.HORIZONTAL)
-        #grid_sizer_Buttons = wx.GridSizer(4, 4, 5, 5)
-        sizer_Page = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Page")), wx.VERTICAL)
-        sizer_Page.Add(self.text_ctrl_Page, 0, 0, 0)
+        sizer_Page = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Bank Select")), wx.VERTICAL)
+        sizer_Page.Add(self.staticTxt_Page, 0, wx.EXPAND, 0)
         sizer_Page.Add(self.button_Up, 3, wx.EXPAND, 0)
         sizer_Page.Add(self.button_Down, 3, wx.EXPAND, 0)
         sizer_Outer.Add(sizer_Page, 1, wx.EXPAND, 1)
@@ -97,5 +97,5 @@ class Manual(wx.Panel):
         for panel in self.panelList:
             panel.Hide()
         self.panelList[self.currentPage - 1].Show()
-        self.text_ctrl_Page.SetLabel("%s"%(self.currentPage))
+        self.staticTxt_Page.SetLabel("Bank: %s"%(self.currentPage))
         self.Layout()
