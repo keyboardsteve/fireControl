@@ -37,7 +37,9 @@ class Manual(wx.Panel):
                 button = wx.Button(panel, wx.ID_ANY, _("%s"%(currentButton+1)))
                 self.buttonList.append(button)
                 currentButton += 1
-        #self.button_Fire1 = wx.Button(self.panel_ButtonPanel1, wx.ID_ANY, _("1"))d
+                if currentButton + 1 > self.numButtons: #If the next button to be made is too high, break out of the loop
+                    break
+        #self.button_Fire1 = wx.Button(self.panel_ButtonPanel1, wx.ID_ANY, _("1"))
 
         self.__set_properties()
         self.__do_layout()
