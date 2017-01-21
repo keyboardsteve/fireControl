@@ -17,7 +17,7 @@ class FireControlFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         
         self.communicationStatus = "Failure"
-        self.numberChannels = 128
+        self.numberFireChannels = 128
         self.manualFireCols = 4
         self.manualFireRows = 4
         self.heartbeatPeriod = 500 # in milliseconds
@@ -37,7 +37,7 @@ class FireControlFrame(wx.Frame):
         self.panel_Diagnostics = Diagnostics.Diagnostics(self)
         self.panel_Diagnostics.Hide()
         
-        self.panel_Manual = Manual.Manual(self, numButtons=self.numberChannels, numCols=self.manualFireCols, numRows=self.manualFireRows)
+        self.panel_Manual = Manual.Manual(self, numButtons=self.numberFireChannels, numCols=self.manualFireCols, numRows=self.manualFireRows)
         self.panel_Manual.Hide()
         
         self.panel_Sequencer = Sequencer.Sequencer(self)
@@ -137,7 +137,7 @@ class FireControlFrame(wx.Frame):
         elif self.operatingMode == "Test":
             ###ADDCODE
             # This need to send the proper message and receive a result before moving onto the next test
-            for channel in range(1, self.numberChannels + 1):
+            for channel in range(1, self.numberFireChannels + 1):
                 print "OnButton_TestAll: Testing channel number", channel
                 self.panel_Diagnostics.text_ctrl_TestAll.AppendText("Testing channel number %s "%(channel))
                 if testList[channel-1]:
@@ -147,7 +147,7 @@ class FireControlFrame(wx.Frame):
                     self.panel_Diagnostics.text_ctrl_TestAll.AppendText("FAIL")
                     self.changeFireButtonColor(channel, "GREEN")
                 self.panel_Diagnostics.text_ctrl_TestAll.AppendText("\n")
-                self.panel_Diagnostics.gauge_TestAll.SetValue(int(channel/self.numberChannels)*100)
+                self.panel_Diagnostics.gauge_TestAll.SetValue(int(channel/self.numberFireChannels)*100)
             if all(testList):
                 wx.MessageBox('Test Completed.  All channels passed!', 'Test Complete', wx.OK)
             else:

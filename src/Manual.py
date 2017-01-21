@@ -19,9 +19,9 @@ class Manual(wx.Panel):
         self.gridSizerList = []
         self.spacing = 5
         
-        self.button_Up = wx.Button(self, wx.ID_ANY, _("Up"))
+        self.button_Up = wx.Button(self, wx.ID_ANY, _("^"))
         self.text_ctrl_Page = wx.TextCtrl(self, wx.ID_ANY, "")
-        self.button_Down = wx.Button(self, wx.ID_ANY, _("Down"))
+        self.button_Down = wx.Button(self, wx.ID_ANY, _("v"))
         
         
         for i in range(self.numPages): #Add one panel for each page
@@ -56,8 +56,8 @@ class Manual(wx.Panel):
         sizer_Outer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Manual Fire")), wx.HORIZONTAL)
         #grid_sizer_Buttons = wx.GridSizer(4, 4, 5, 5)
         sizer_Page = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Page")), wx.VERTICAL)
-        sizer_Page.Add(self.button_Up, 3, wx.EXPAND, 0)
         sizer_Page.Add(self.text_ctrl_Page, 0, 0, 0)
+        sizer_Page.Add(self.button_Up, 3, wx.EXPAND, 0)
         sizer_Page.Add(self.button_Down, 3, wx.EXPAND, 0)
         sizer_Outer.Add(sizer_Page, 1, wx.EXPAND, 1)
         
@@ -86,12 +86,13 @@ class Manual(wx.Panel):
 
     def OnButton_Page(self, event):
         button = event.GetEventObject().LabelText.strip()
-        if button == "Up":
-            if (self.currentPage + 1 <= len(self.panelList)):
-                self.currentPage = self.currentPage + 1
-        elif button == "Down":
+        if button == "^":
             if (self.currentPage - 1 >= 1):
                 self.currentPage = self.currentPage - 1
+        elif button == "v":
+            if (self.currentPage + 1 <= len(self.panelList)):
+                self.currentPage = self.currentPage + 1
+
         print "OnButton_Page: Page change %s to %s"%(button, self.currentPage)
         for panel in self.panelList:
             panel.Hide()
