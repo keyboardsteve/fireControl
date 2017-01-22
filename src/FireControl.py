@@ -10,6 +10,7 @@ import OperatingMode
 import Diagnostics
 import Manual
 import Sequencer
+import EditSequencer
 
 
 class FireControlFrame(wx.Frame):
@@ -30,19 +31,23 @@ class FireControlFrame(wx.Frame):
         self.button_Diagnostics = wx.Button(self, wx.ID_ANY, _("Diagnostics"))
         self.button_Manual = wx.Button(self, wx.ID_ANY, _("Manual"))
         self.button_Sequencer = wx.Button(self, wx.ID_ANY, _("Sequencer"))
+        self.defaultColor = self.button_Sequencer.GetBackgroundColour()
+        
+        self.modeButtonList = [self.button_Mode,
+                               self.button_Diagnostics,
+                               self.button_Manual,
+                               self.button_Sequencer]
         
         self.panel_OperatingMode = OperatingMode.OperatingMode(self)
-        self.operatingMode = self.panel_OperatingMode.operatingMode
-        
         self.panel_Diagnostics = Diagnostics.Diagnostics(self)
-        self.panel_Diagnostics.Hide()
-        
         self.panel_Manual = Manual.Manual(self, numButtons=self.numberFireChannels, numCols=self.manualFireCols, numRows=self.manualFireRows)
-        self.panel_Manual.Hide()
-        
         self.panel_Sequencer = Sequencer.Sequencer(self)
-        self.panel_Sequencer.Hide()
-
+        self.modePanelList = [self.panel_OperatingMode,
+                              self.panel_Diagnostics,
+                              self.panel_Manual,
+                              self.panel_Sequencer]
+        
+        self.operatingMode = self.panel_OperatingMode.operatingMode
         self.FireControl_Frame_statusbar = self.CreateStatusBar(2)
         
         self.__set_properties()
@@ -61,6 +66,10 @@ class FireControlFrame(wx.Frame):
         
         for button in self.panel_Manual.buttonList:
             self.Bind(wx.EVT_BUTTON, self.OnButton_Fire, button)
+
+        for sequencer in self.panel_Sequencer.panelList:
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Edit, sequencer.button_Edit)
+        #self.panel_Sequencer.button_Edit.Bind(wx.EVT_BUTTON, self.OnButton_Edit)
         
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
         
@@ -69,6 +78,14 @@ class FireControlFrame(wx.Frame):
         self.SetTitle(_("Fire Control"))
         self.SetSize((800, 480))
         self.FireControl_Frame_statusbar.SetStatusWidths([150, -1])
+        
+        for panel in self.modePanelList:
+            panel.Hide()
+        self.modePanelList[0].Show()
+        
+        for button in self.modeButtonList:
+            button.SetBackgroundColour(self.defaultColor)
+        self.modeButtonList[0].SetBackgroundColour(wx.NamedColour('YELLOW'))
 
         # statusbar fields
         FireControl_Frame_statusbar_fields = [_("Communication: %s"%(self.communicationStatus)), _("Status: %s"%(self.operatingMode))]
@@ -95,26 +112,22 @@ class FireControlFrame(wx.Frame):
     def OnButton_Navigation(self, event):
         self.currentPanel = event.GetEventObject().LabelText.strip()
         print "OnButton_Navigation: Panel changed to", self.currentPanel
+        for panel in self.modePanelList:
+            panel.Hide()
+        for button in self.modeButtonList:
+            button.SetBackgroundColour(self.defaultColor)
         if self.currentPanel == "Mode":
-            self.panel_Diagnostics.Hide()
-            self.panel_Manual.Hide()
-            self.panel_Sequencer.Hide()
             self.panel_OperatingMode.Show()
+            self.button_Mode.SetBackgroundColour(wx.NamedColour('YELLOW'))
         elif self.currentPanel == "Diagnostics":
-            self.panel_OperatingMode.Hide()
-            self.panel_Manual.Hide()
-            self.panel_Sequencer.Hide()
             self.panel_Diagnostics.Show()
+            self.button_Diagnostics.SetBackgroundColour(wx.NamedColour('YELLOW'))
         elif self.currentPanel == "Manual":
-            self.panel_OperatingMode.Hide()
-            self.panel_Diagnostics.Hide()
-            self.panel_Sequencer.Hide()
             self.panel_Manual.Show()
+            self.button_Manual.SetBackgroundColour(wx.NamedColour('YELLOW'))
         elif self.currentPanel == "Sequencer":
-            self.panel_OperatingMode.Hide()
-            self.panel_Diagnostics.Hide()
-            self.panel_Manual.Hide()
             self.panel_Sequencer.Show()
+            self.button_Sequencer.SetBackgroundColour(wx.NamedColour('YELLOW'))
         self.Layout()
         
     def OnButton_OperatingMode(self, event):
@@ -158,7 +171,13 @@ class FireControlFrame(wx.Frame):
             e = event.GetEventObject().LabelText.strip()
             print "OnButton_Fire: Fire Event for button", e
             self.writeToTxLog("Fire for channel %s"%(e))
-            
+
+    def OnButton_Edit(self, event):
+        name =  event.GetEventObject().GetName()
+        print "OnButton_Edit: Editing Sequencer Bank %s"%(name)
+        editWindow = EditSequencer.EditSequencer(self)
+        editWindow.Show()
+
 #--------------CHECKBOX CALLBACKS----------------  
     def OnCheckbox_TxFilter(self, event):
         print "Toggling logging of TxHeartbeat messages"
