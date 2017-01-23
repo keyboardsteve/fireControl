@@ -2,6 +2,7 @@
 
 
 import wx
+from wx.lib.pubsub import pub
 
 import gettext
 import time
@@ -11,6 +12,7 @@ import Diagnostics
 import Manual
 import Sequencer
 import EditSequencer
+from twisted.conch.ssh import channel
 
 
 class FireControlFrame(wx.Frame):
@@ -69,10 +71,13 @@ class FireControlFrame(wx.Frame):
 
         for sequencer in self.panel_Sequencer.panelList:
             self.Bind(wx.EVT_BUTTON, self.OnButton_Edit, sequencer.button_Edit)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Clear, sequencer.button_Clear)
         #self.panel_Sequencer.button_Edit.Bind(wx.EVT_BUTTON, self.OnButton_Edit)
         
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
         
+        self.subcsriber_Add = pub.subscribe(self.OnPubSub_Add, "Sequencer_Add")
+        self.subcsriber_Remove = pub.subscribe(self.OnPubSub_Remove, "Sequencer_Remove")
 
     def __set_properties(self):
         self.SetTitle(_("Fire Control"))
@@ -175,8 +180,66 @@ class FireControlFrame(wx.Frame):
     def OnButton_Edit(self, event):
         name =  event.GetEventObject().GetName()
         print "OnButton_Edit: Editing Sequencer Bank %s"%(name)
-        editWindow = EditSequencer.EditSequencer(self)
+        editWindow = EditSequencer.EditSequencer(self, name)
         editWindow.Show()
+
+    def OnButton_Clear(self, event):
+        sequencer =  event.GetEventObject().GetName()
+        print "OnButton_Edit: Clearing Sequencer Bank %s"%(sequencer)
+        if sequencer == "Clear_A":
+            idx = 0
+        elif sequencer == "Clear_B":
+            idx = 1
+        elif sequencer == "Clear_C":
+            idx = 2
+        elif sequencer == "Clear_D":
+            idx = 3
+        listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
+        for i in range(listcontrol.GetItemCount()):
+            item = listcontrol.GetItem(0)
+            channel = item.GetText()
+            self.panel_Manual.buttonList[int(channel)-1].Enable()
+            row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, channel)
+            self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
+        
+
+#-------------PUB/SUB CALLBACKS------------------
+
+    def OnPubSub_Add(self, sequencer, channel, time):
+        #print sequencer 
+        item = [channel, time]
+
+        if sequencer == "Edit_A":
+            idx = 0
+        elif sequencer == "Edit_B":
+            idx = 1
+        elif sequencer == "Edit_C":
+            idx = 2
+        elif sequencer == "Edit_D":
+            idx = 3
+            
+        #Disable the button in the manual panel
+        if self.panel_Manual.buttonList[channel-1].IsEnabled():
+            self.panel_Manual.buttonList[channel-1].Disable()
+            self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.Append(item)
+        else:
+            wx.MessageBox('This channel is already reserved elsewhere.', 'Reserved Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
+
+    def OnPubSub_Remove(self, sequencer, channel):
+        item = str(channel)
+        if sequencer == "Edit_A":
+            idx = 0
+        elif sequencer == "Edit_B":
+            idx = 1
+        elif sequencer == "Edit_C":
+            idx = 2
+        elif sequencer == "Edit_D":
+            idx = 3
+
+        row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, item)
+        self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
+        
+        self.panel_Manual.buttonList[channel-1].Enable()
 
 #--------------CHECKBOX CALLBACKS----------------  
     def OnCheckbox_TxFilter(self, event):

@@ -29,6 +29,7 @@ class SequencerProgram(wx.Panel):
         self.button_Load = wx.Button(self.panel_Sequencer_Editor, wx.ID_ANY, _("Load"))
         self.button_Save = wx.Button(self.panel_Sequencer_Editor, wx.ID_ANY, _("Save"))
         self.button_Clear = wx.Button(self.panel_Sequencer_Editor, wx.ID_ANY, _("Clear"))
+        self.button_Clear.SetName("Clear_%s"%(name))
         self.button_Edit = wx.Button(self.panel_Sequencer_Editor, wx.ID_ANY, _("Edit"))
         self.button_Edit.SetName("Edit_%s"%(name))
         self.list_ctrl_Sequencer = wx.ListCtrl(self.panel_Sequencer_Editor, wx.ID_ANY, style=wx.LC_REPORT|wx.BORDER_SUNKEN)
