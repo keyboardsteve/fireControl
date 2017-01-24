@@ -6,6 +6,7 @@ from wx.lib.pubsub import pub
 
 import gettext
 import time
+import os
 
 import OperatingMode
 import Diagnostics
@@ -72,6 +73,8 @@ class FireControlFrame(wx.Frame):
         for sequencer in self.panel_Sequencer.panelList:
             self.Bind(wx.EVT_BUTTON, self.OnButton_Edit, sequencer.button_Edit)
             self.Bind(wx.EVT_BUTTON, self.OnButton_Clear, sequencer.button_Clear)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Load, sequencer.button_Load)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Save, sequencer.button_Save)
         #self.panel_Sequencer.button_Edit.Bind(wx.EVT_BUTTON, self.OnButton_Edit)
         
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
@@ -186,14 +189,9 @@ class FireControlFrame(wx.Frame):
     def OnButton_Clear(self, event):
         sequencer =  event.GetEventObject().GetName()
         print "OnButton_Edit: Clearing Sequencer Bank %s"%(sequencer)
-        if sequencer == "Clear_A":
-            idx = 0
-        elif sequencer == "Clear_B":
-            idx = 1
-        elif sequencer == "Clear_C":
-            idx = 2
-        elif sequencer == "Clear_D":
-            idx = 3
+        option = ['A','B','C','D']
+        letter = sequencer[-1]
+        idx = option.index(letter)
         listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
         for i in range(listcontrol.GetItemCount()):
             item = listcontrol.GetItem(0)
@@ -202,7 +200,32 @@ class FireControlFrame(wx.Frame):
             row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, channel)
             self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
         
-
+    def OnButton_Load(self, event):
+        sequencer =  event.GetEventObject().GetName()
+        print "OnButton_Load: Loading Sequencer Bank %s"%(sequencer)
+        letter = sequencer[-1] # Gets the last letter of the sequencer "Load_A", "Load_B", etc...
+        self.OnButton_Clear(event)
+        path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(letter))
+        with open(path, 'r') as file:
+            for line in file.readlines():
+                channel, time = line.split(',')
+                self.OnPubSub_Add("Edit_%s"%(letter), int(channel), float(time))
+                
+    def OnButton_Save(self, event):
+        sequencer =  event.GetEventObject().GetName()
+        print "OnButton_Save: Saving Sequencer Bank %s"%(sequencer)
+        option = ['A','B','C','D']
+        letter = sequencer[-1]
+        idx = option.index(letter)
+        path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(letter))
+        with open(path, 'w') as file:
+            for i in range(self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItemCount()):
+                channel = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 0).GetText()
+                time = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText()
+                file.write("%s,%s\n"%(channel, time))
+        wx.MessageBox('This sequence was saved', 'Finished', wx.OK | wx.STAY_ON_TOP)
+        
+        
 #-------------PUB/SUB CALLBACKS------------------
 
     def OnPubSub_Add(self, sequencer, channel, time):
@@ -219,11 +242,14 @@ class FireControlFrame(wx.Frame):
             idx = 3
             
         #Disable the button in the manual panel
-        if self.panel_Manual.buttonList[channel-1].IsEnabled():
-            self.panel_Manual.buttonList[channel-1].Disable()
-            self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.Append(item)
-        else:
-            wx.MessageBox('This channel is already reserved elsewhere.', 'Reserved Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
+        try:
+            if self.panel_Manual.buttonList[channel-1].IsEnabled():
+                self.panel_Manual.buttonList[channel-1].Disable()
+                self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.Append(item)
+            else:
+                wx.MessageBox('The channel %s is already in use elsewhere.'%(channel), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
+        except IndexError:
+                wx.MessageBox('The channel %s does not exist.'%(channel), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 
     def OnPubSub_Remove(self, sequencer, channel):
         item = str(channel)
@@ -238,7 +264,6 @@ class FireControlFrame(wx.Frame):
 
         row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, item)
         self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
-        
         self.panel_Manual.buttonList[channel-1].Enable()
 
 #--------------CHECKBOX CALLBACKS----------------  
