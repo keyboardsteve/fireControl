@@ -19,6 +19,8 @@ class Sequencer(wx.Panel):
         # begin wxGlade: Sequencer.__init__
         wx.Panel.__init__(self, parent=parent)
         
+        self.masterTimerDecoder = []
+        
         self.button_Sequencer_BankA = wx.Button(self, wx.ID_ANY, _("A"))
         self.button_Sequencer_BankB = wx.Button(self, wx.ID_ANY, _("B"))
         self.button_Sequencer_BankC = wx.Button(self, wx.ID_ANY, _("C"))

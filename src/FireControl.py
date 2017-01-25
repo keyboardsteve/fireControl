@@ -75,6 +75,7 @@ class FireControlFrame(wx.Frame):
             self.Bind(wx.EVT_BUTTON, self.OnButton_Clear, sequencer.button_Clear)
             self.Bind(wx.EVT_BUTTON, self.OnButton_Load, sequencer.button_Load)
             self.Bind(wx.EVT_BUTTON, self.OnButton_Save, sequencer.button_Save)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Play, sequencer.button_Sequencer_Play)
         #self.panel_Sequencer.button_Edit.Bind(wx.EVT_BUTTON, self.OnButton_Edit)
         
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
@@ -199,6 +200,7 @@ class FireControlFrame(wx.Frame):
             self.panel_Manual.buttonList[int(channel)-1].Enable()
             row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, channel)
             self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
+            self.panel_Sequencer.panelList[idx].timerList.pop(row)
         
     def OnButton_Load(self, event):
         sequencer =  event.GetEventObject().GetName()
@@ -225,27 +227,41 @@ class FireControlFrame(wx.Frame):
                 file.write("%s,%s\n"%(channel, time))
         wx.MessageBox('This sequence was saved', 'Finished', wx.OK | wx.STAY_ON_TOP)
         
+    def OnButton_Play(self, event):
+        if self.operatingMode == "Armed" or self.operatingMode == "Test":
+            sequencer =  event.GetEventObject().GetName()
+            print "OnButton_Play: Playing Sequencer Bank %s"%(sequencer)
+            option = ['A','B','C','D']
+            letter = sequencer[-1]
+            idx = option.index(letter)
+            
+            #print self.panel_Sequencer.panelList[idx].timerList
+            for i, timer in enumerate(self.panel_Sequencer.panelList[idx].timerList):
+                self.Bind(wx.EVT_TIMER, self.OnTimer_SequencerFire, timer)
+                delay = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText()
+                delayinms = int(float(delay)*1000)
+                timer.Start(delayinms, oneShot=True)
+        
         
 #-------------PUB/SUB CALLBACKS------------------
 
     def OnPubSub_Add(self, sequencer, channel, time):
-        #print sequencer 
         item = [channel, time]
-
-        if sequencer == "Edit_A":
-            idx = 0
-        elif sequencer == "Edit_B":
-            idx = 1
-        elif sequencer == "Edit_C":
-            idx = 2
-        elif sequencer == "Edit_D":
-            idx = 3
+        option = ['A','B','C','D']
+        letter = sequencer[-1]
+        idx = option.index(letter)
             
         #Disable the button in the manual panel
         try:
             if self.panel_Manual.buttonList[channel-1].IsEnabled():
                 self.panel_Manual.buttonList[channel-1].Disable()
                 self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.Append(item)
+                timer = wx.Timer(self)
+                self.panel_Sequencer.masterTimerDecoder.append({"Id":timer.GetId(),
+                                                                "Sequencer": letter,
+                                                                "Channel": channel,
+                                                                "Time": time})
+                self.panel_Sequencer.panelList[idx].timerList.append(timer)
             else:
                 wx.MessageBox('The channel %s is already in use elsewhere.'%(channel), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
         except IndexError:
@@ -253,17 +269,13 @@ class FireControlFrame(wx.Frame):
 
     def OnPubSub_Remove(self, sequencer, channel):
         item = str(channel)
-        if sequencer == "Edit_A":
-            idx = 0
-        elif sequencer == "Edit_B":
-            idx = 1
-        elif sequencer == "Edit_C":
-            idx = 2
-        elif sequencer == "Edit_D":
-            idx = 3
+        option = ['A','B','C','D']
+        letter = sequencer[-1]
+        idx = option.index(letter)
 
         row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, item)
         self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
+        self.panel_Sequencer.panelList[idx].timerList.pop(row)
         self.panel_Manual.buttonList[channel-1].Enable()
 
 #--------------CHECKBOX CALLBACKS----------------  
@@ -281,6 +293,32 @@ class FireControlFrame(wx.Frame):
         if not self.panel_Diagnostics.checkbox_TxLogFilter.IsChecked():
             self.writeToTxLog("Heartbeat message sent (Not really)")
             
+    def OnTimer_SequencerFire(self, event):
+        id = event.GetId()
+        for item in self.panel_Sequencer.masterTimerDecoder:
+            if item["Id"] == id:
+                sequencer = item["Sequencer"]
+                channel = item["Channel"]
+                option = ['A','B','C','D']
+                letter = sequencer[-1]
+                idx = option.index(letter)
+                listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
+                row = listcontrol.FindItem(-1, str(channel))
+                listcontrol.SetStringItem(row, 2, "FIRED")
+                print "OnTimer_SequencerFire: Fire command for sequencer %s, channel %s"%(sequencer, channel)
+                
+                ''' Holy cow, this works.  To fire the channel, I wanted to "virtually" press a button on the Manual page.  Obviously
+                this couldn't be done with a mouse click, so I manually created the event that would have been generated by the click,
+                and then assigned the button on the Manual page as the event object, then posted it!
+                '''
+                e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.panel_Manual.buttonList[channel-1].GetId())
+                e.SetEventObject(self.panel_Manual.buttonList[channel-1])
+                wx.PostEvent(self.GetEventHandler(), e)
+                break
+        self.panel_Sequencer.masterTimerDecoder.remove(item)
+            
+        
+                    
 #--------------HELPER FUNCTIONS----------------
     def writeToTxLog(self, msg):
         # Just adds the newline & helps me remember what I'm writing to...

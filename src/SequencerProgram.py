@@ -19,8 +19,11 @@ class SequencerProgram(wx.Panel):
         # begin wxGlade: SequencerProgram.__init__
         wx.Panel.__init__(self, parent=parent, name = name)
         
+        self.timerList = []
+        
         self.panel_SequencerProgram = wx.Panel(self, wx.ID_ANY)
         self.button_Sequencer_Play = wx.Button(self.panel_SequencerProgram, wx.ID_ANY, _("Play"))
+        self.button_Sequencer_Play.SetName("Play_%s"%(name))
         self.button_Sequencer_Stop = wx.Button(self.panel_SequencerProgram, wx.ID_ANY, _("Stop"))
         self.button_Sequencer_Reset = wx.Button(self.panel_SequencerProgram, wx.ID_ANY, _("Reset"))
         self.panel_Sequencer_Simulator = wx.Panel(self.panel_SequencerProgram, wx.ID_ANY, style=wx.BORDER_DOUBLE)
