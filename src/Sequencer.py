@@ -10,9 +10,6 @@ import wx
 import gettext
 # end wxGlade
 import SequencerProgram
-# begin wxGlade: extracode
-# end wxGlade
-
 
 class Sequencer(wx.Panel):
     def __init__(self, parent):
@@ -20,6 +17,7 @@ class Sequencer(wx.Panel):
         wx.Panel.__init__(self, parent=parent)
         
         self.masterTimerDecoder = []
+
         
         self.button_Sequencer_BankA = wx.Button(self, wx.ID_ANY, _("A"))
         self.button_Sequencer_BankB = wx.Button(self, wx.ID_ANY, _("B"))

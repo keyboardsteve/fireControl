@@ -76,6 +76,10 @@ class FireControlFrame(wx.Frame):
             self.Bind(wx.EVT_BUTTON, self.OnButton_Load, sequencer.button_Load)
             self.Bind(wx.EVT_BUTTON, self.OnButton_Save, sequencer.button_Save)
             self.Bind(wx.EVT_BUTTON, self.OnButton_Play, sequencer.button_Sequencer_Play)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Stop, sequencer.button_Sequencer_Stop)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Reset, sequencer.button_Sequencer_Reset)
+            sequencer.button_Sequencer_Stop.Disable()
+            sequencer.button_Sequencer_Reset.Disable()
         #self.panel_Sequencer.button_Edit.Bind(wx.EVT_BUTTON, self.OnButton_Edit)
         
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
@@ -193,6 +197,9 @@ class FireControlFrame(wx.Frame):
         option = ['A','B','C','D']
         letter = sequencer[-1]
         idx = option.index(letter)
+        self.OnButton_Reset(event)
+        self.panel_Sequencer.panelList[idx].button_Save.Enable()
+        self.panel_Sequencer.panelList[idx].button_Load.Enable()
         listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
         for i in range(listcontrol.GetItemCount()):
             item = listcontrol.GetItem(0)
@@ -201,6 +208,9 @@ class FireControlFrame(wx.Frame):
             row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, channel)
             self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
             self.panel_Sequencer.panelList[idx].timerList.pop(row)
+            for timerDecode in self.panel_Sequencer.masterTimerDecoder:
+                if timerDecode["Sequencer"] == letter and timerDecode["Channel"] == int(channel):
+                    self.panel_Sequencer.masterTimerDecoder.remove(timerDecode)
         
     def OnButton_Load(self, event):
         sequencer =  event.GetEventObject().GetName()
@@ -235,13 +245,82 @@ class FireControlFrame(wx.Frame):
             letter = sequencer[-1]
             idx = option.index(letter)
             
-            #print self.panel_Sequencer.panelList[idx].timerList
+            # Disable the play button, so you cannot hit it twice...
+            self.panel_Sequencer.panelList[idx].button_Sequencer_Play.Disable()
+            self.panel_Sequencer.panelList[idx].button_Sequencer_Stop.Enable()
+            self.panel_Sequencer.panelList[idx].button_Sequencer_Reset.Disable()
+            self.panel_Sequencer.panelList[idx].button_Load.Disable()
+            self.panel_Sequencer.panelList[idx].button_Save.Disable()
+            self.panel_Sequencer.panelList[idx].startTime = time.time()
+            if self.panel_Sequencer.panelList[idx].stopTime is None:
+                self.panel_Sequencer.panelList[idx].stopTime = time.time()
             for i, timer in enumerate(self.panel_Sequencer.panelList[idx].timerList):
-                self.Bind(wx.EVT_TIMER, self.OnTimer_SequencerFire, timer)
-                delay = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText()
-                delayinms = int(float(delay)*1000)
-                timer.Start(delayinms, oneShot=True)
+                targetTime = float(self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText())
+                delay = self.panel_Sequencer.panelList[idx].stopTime - self.panel_Sequencer.panelList[idx].startTime
+                scheduledTime = targetTime + delay
+                print "Delay:", delay, "Scheduled Time:", scheduledTime
+                if scheduledTime >= 0.0: # If the scheduled time happens in the future
+                    self.Bind(wx.EVT_TIMER, self.OnTimer_SequencerFire, timer)
+                    delayinms = int(float(scheduledTime)*1000)
+                    timer.Start(delayinms, oneShot=True)
+        else:
+            wx.MessageBox('System is in Safety.  Please change mode to "Test" to test all channels.', 'Safety first...', wx.OK)
         
+    def OnButton_Stop(self, event):
+        sequencer =  event.GetEventObject().GetName()
+        print "OnButton_Stopping: Stopping Sequencer Bank %s"%(sequencer)
+        option = ['A','B','C','D']
+        letter = sequencer[-1]
+        idx = option.index(letter)
+        self.panel_Sequencer.panelList[idx].button_Sequencer_Play.Enable()
+        self.panel_Sequencer.panelList[idx].button_Sequencer_Stop.Disable()
+        self.panel_Sequencer.panelList[idx].button_Sequencer_Reset.Enable()
+        for timer in self.panel_Sequencer.panelList[idx].timerList:
+            if timer.IsRunning():
+                timer.Stop()
+        self.panel_Sequencer.panelList[idx].stopTime = time.time()
+            
+    
+    def OnButton_Reset(self, event):
+        sequencer =  event.GetEventObject().GetName()
+        print "OnButton_Reset: Resetting Sequencer Bank %s"%(sequencer)
+        option = ['A','B','C','D']
+        letter = sequencer[-1]
+        idx = option.index(letter)
+        
+        self.panel_Sequencer.panelList[idx].button_Sequencer_Play.Enable()
+        self.panel_Sequencer.panelList[idx].button_Sequencer_Stop.Disable()
+        self.panel_Sequencer.panelList[idx].button_Sequencer_Reset.Disable()
+        self.panel_Sequencer.panelList[idx].startTime = time.time()
+        self.panel_Sequencer.panelList[idx].stopTime = None
+        # Need to flush out all of the masterTimerList entries for that sequencer
+        # Need to Stop all of the timers in the masterTimerList
+        for timer in self.panel_Sequencer.panelList[idx].timerList:
+            if timer.IsRunning():
+                timer.Stop()
+            for i, timerDecode in enumerate(self.panel_Sequencer.masterTimerDecoder):
+                if timerDecode["Id"] == timer.GetId():
+                    self.panel_Sequencer.masterTimerDecoder.pop(i)
+        self.panel_Sequencer.panelList[idx].timerList = []
+        self.panel_Sequencer.panelList[idx].startTime = 0.0
+        # Need to clear out all of the "FIRED" entries
+        listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
+        for i in range(listcontrol.GetItemCount()):
+            #print i
+            listcontrol.SetStringItem(i, 2, "")
+        # Need to Requeue all of the sequencer's timers again from the ListControl
+        # Need to Requeue all of the timers into the masterTimerList
+            channel = int(self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 0).GetText())
+            delay = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText()
+            timer = wx.Timer(self)
+            self.panel_Sequencer.masterTimerDecoder.append({"Id":timer.GetId(),
+                                                                "Sequencer": letter,
+                                                                "Channel": channel,
+                                                                "Time": time})
+            self.panel_Sequencer.panelList[idx].timerList.append(timer)
+
+        print "TimerList", len(self.panel_Sequencer.panelList[idx].timerList)
+        print "MasterTimerDecode", self.panel_Sequencer.masterTimerDecoder
         
 #-------------PUB/SUB CALLBACKS------------------
 
@@ -295,6 +374,7 @@ class FireControlFrame(wx.Frame):
             
     def OnTimer_SequencerFire(self, event):
         id = event.GetId()
+        print self.panel_Sequencer.masterTimerDecoder
         for item in self.panel_Sequencer.masterTimerDecoder:
             if item["Id"] == id:
                 sequencer = item["Sequencer"]
@@ -303,7 +383,10 @@ class FireControlFrame(wx.Frame):
                 letter = sequencer[-1]
                 idx = option.index(letter)
                 listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
+                #print listcontrol.GetItemCount()
+                #print "channel", channel
                 row = listcontrol.FindItem(-1, str(channel))
+                #print "row", row
                 listcontrol.SetStringItem(row, 2, "FIRED")
                 print "OnTimer_SequencerFire: Fire command for sequencer %s, channel %s"%(sequencer, channel)
                 
