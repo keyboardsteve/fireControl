@@ -16,7 +16,7 @@ class Diagnostics(wx.Panel):
         self.checkbox_RxLogFilter = wx.CheckBox(self, wx.ID_ANY, _("Filter out Heartbeat entries"))
         self.text_ctrl_RxLog = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_MULTILINE)
         self.button_TestAll = wx.Button(self, wx.ID_ANY, _("Test All"))
-        self.gauge_TestAll = wx.Gauge(self, wx.ID_ANY, 10)
+        self.gauge_TestAll = wx.Gauge(self, wx.ID_ANY, 100)
         self.text_ctrl_TestAll = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_MULTILINE)
 
         self.__set_properties()
