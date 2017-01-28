@@ -13,7 +13,6 @@ import Diagnostics
 import Manual
 import Sequencer
 import EditSequencer
-from twisted.conch.ssh import channel
 
 
 class FireControlFrame(wx.Frame):
