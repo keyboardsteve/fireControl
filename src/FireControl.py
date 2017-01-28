@@ -168,12 +168,12 @@ class FireControlFrame(wx.Frame):
                 self.panel_Diagnostics.text_ctrl_TestAll.AppendText("Testing channel number %s "%(channel))
                 if testList[channel-1]:
                     self.panel_Diagnostics.text_ctrl_TestAll.AppendText("PASS")
-                    self.changeFireButtonColor(channel, "RED")
+                    self.changeFireButtonColor(channel, "GREEN")
                 else:
                     self.panel_Diagnostics.text_ctrl_TestAll.AppendText("FAIL")
-                    self.changeFireButtonColor(channel, "GREEN")
+                    self.changeFireButtonColor(channel, "RED")
                 self.panel_Diagnostics.text_ctrl_TestAll.AppendText("\n")
-                self.panel_Diagnostics.gauge_TestAll.SetValue(int(channel/self.numberFireChannels)*100)
+                self.panel_Diagnostics.gauge_TestAll.SetValue(int(float(channel)/float(self.numberFireChannels)*100.0))
             if all(testList):
                 wx.MessageBox('Test Completed.  All channels passed!', 'Test Complete', wx.OK)
             else:
