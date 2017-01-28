@@ -35,9 +35,9 @@ class OperatingMode(wx.Panel):
         # end wxGlade
 
     def __set_properties(self):
-        self.button_Safety.SetBackgroundColour(wx.Colour(0, 255, 0))
-        self.button_Test.SetBackgroundColour(wx.Colour(0, 0, 255))
-        self.button_Arm.SetBackgroundColour(wx.Colour(255, 0, 0))
+        self.button_Safety.SetBackgroundColour(wx.NamedColour('GREEN'))
+        self.button_Test.SetBackgroundColour(wx.NamedColour('BLUE'))
+        self.button_Arm.SetBackgroundColour(wx.NamedColour('RED'))
 
     def __do_layout(self):
         # begin wxGlade: OperatingMode.__do_layout
