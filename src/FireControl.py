@@ -8,6 +8,8 @@ import gettext
 import time
 import os
 
+import SerialComs # For xbee connection
+
 import OperatingMode
 import Diagnostics
 import Manual
@@ -27,6 +29,10 @@ class FireControlFrame(wx.Frame):
         self.heartbeatTimer = wx.Timer(self)
         self.heartbeatTimer.Start(self.heartbeatPeriod, False)
         
+        self.serial = SerialComs.SerialComs(handler = "Receive_Coms")
+        
+        self.remoteOperatingMode = "Safety"
+                
         self.currentPanel = "Mode"
         
         self.button_Mode = wx.Button(self, wx.ID_ANY, _("Mode"))
@@ -85,6 +91,7 @@ class FireControlFrame(wx.Frame):
         
         self.subcsriber_Add = pub.subscribe(self.OnPubSub_Add, "Sequencer_Add")
         self.subcsriber_Remove = pub.subscribe(self.OnPubSub_Remove, "Sequencer_Remove")
+        self.subcsriber_Coms = pub.subscribe(self.OnPubSub_Coms, "Receive_Coms")
 
     def __set_properties(self):
         self.SetTitle(_("Fire Control"))
@@ -120,6 +127,7 @@ class FireControlFrame(wx.Frame):
         
         self.SetSizer(Sizer_Main)
         self.Layout()
+        
 #--------------BUTTON CALLBACKS----------------
     def OnButton_Navigation(self, event):
         self.currentPanel = event.GetEventObject().LabelText.strip()
@@ -278,8 +286,7 @@ class FireControlFrame(wx.Frame):
             if timer.IsRunning():
                 timer.Stop()
         self.panel_Sequencer.panelList[idx].stopTime = time.time()
-            
-    
+         
     def OnButton_Reset(self, event):
         sequencer =  event.GetEventObject().GetName()
         print "OnButton_Reset: Resetting Sequencer Bank %s"%(sequencer)
@@ -356,6 +363,31 @@ class FireControlFrame(wx.Frame):
         self.panel_Sequencer.panelList[idx].timerList.pop(row)
         self.panel_Manual.buttonList[channel-1].Enable()
 
+    def OnPubSub_Coms(self, data):
+        msg = data.strip()
+        
+        if msg == "":  # we timed out...  no response.  Not good.
+            if self.communicationStatus == "Connected":
+                self.communicationStatus = "Failure"
+                self.FireControl_Frame_statusbar.SetStatusText("Communication: %s"%(self.communicationStatus), 0)
+                self.writeToRxLog("Communications with remote lost!")
+        elif msg[0] == "R":
+            if not self.panel_Diagnostics.checkbox_RxLogFilter.IsChecked():
+                self.writeToRxLog("Heartbeat echo received")
+            if self.communicationStatus == "Failure":
+                self.communicationStatus = "Connected"
+                self.FireControl_Frame_statusbar.SetStatusText("Communication: %s"%(self.communicationStatus), 0)
+                self.writeToRxLog("Communications with remote restored!")
+            if data[2] != self.remoteOperatingMode:
+                #Update the remote operating mode
+                if data[2] == "0":
+                    self.remoteOperatingMode = "Safety"
+                elif data[2] == "1":
+                    self.remoteOperatingMode = "Test"
+                elif data[2] == "2":
+                    self.remoteOperatingMode = "Armed"
+        else:
+            self.writeToRxLog("Unknown msg: %s"%(data))
 #--------------CHECKBOX CALLBACKS----------------  
     def OnCheckbox_TxFilter(self, event):
         print "Toggling logging of TxHeartbeat messages"
@@ -369,7 +401,13 @@ class FireControlFrame(wx.Frame):
 #--------------TIMER CALLBACKS----------------
     def OnTimer_Heartbeat(self, event):
         if not self.panel_Diagnostics.checkbox_TxLogFilter.IsChecked():
-            self.writeToTxLog("Heartbeat message sent (Not really)")
+            self.writeToTxLog("Heartbeat message sent (H)")
+        self.serial.send(b"H")
+        
+    def OnTimer_Heartbeat_Expire(self, event):
+        self.communicationStatus = "Failure"
+        self.FireControl_Frame_statusbar.SetStatusText("Communication: %s"%(self.communicationStatus), 0)
+        
             
     def OnTimer_SequencerFire(self, event):
         id = event.GetId()
