@@ -19,15 +19,12 @@ class SerialComs():
         self.t.start()
         
     def send(self, msg):
-        self.xbee.write(msg)
+        tmp = msg+'\n'
+        self.xbee.write(tmp.encode())
         
     def recv(self):
         msg = []
         while True:
-            '''
-            char = str(self.xbee.read())
-            print "Char", char
-            '''
             data = self.xbee.readline()
             pub.sendMessage("Receive_Coms", data = data)
     
