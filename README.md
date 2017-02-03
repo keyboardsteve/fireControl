@@ -1,4 +1,7 @@
 # fireControl
+
+Manual Mode Improvements Branch
+
 Fire control board
 
 This is the project for the remote Fire Control board
