@@ -209,11 +209,11 @@ class FireControlFrame(wx.Frame):
 
     def OnButton_Fire(self, event):
         if self.operatingMode == "Armed" or self.operatingMode == "Test":
-            e = event.GetEventObject().LabelText.strip()
+            e = event.GetEventObject().GetId()
             if self.operatingMode == self.remoteOperatingMode:
                 print "OnButton_Fire: Fire Event for button", e
                 self.writeToTxLog("Fire for channel %s"%(e))
-                self.serial.send("F"+e)
+                self.serial.send("F%s"%(e))
             else:
                 wx.MessageBox('Fire aborted.  The local and remote system mode are out of sync', 'Modes out of sync', wx.OK | wx.ICON_ERROR)
 
