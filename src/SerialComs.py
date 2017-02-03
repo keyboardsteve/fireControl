@@ -11,7 +11,7 @@ class SerialComs():
         self.handler = handler
         #self.xbee = serial.Serial(timeout = 0.1)
         self.xbee = serial.Serial(timeout = 1)
-        self.xbee.baudrate = 9600
+        self.xbee.baudrate = 19200
         self.xbee.port = "COM3"  #THIS NEED TO AUTOMATICALLY FIND THE SERIAL DEVICE SOMEHOW...
         self.xbee.open()
         self.t = threading.Thread(target=self.recv)

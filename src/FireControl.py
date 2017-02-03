@@ -350,8 +350,8 @@ class FireControlFrame(wx.Frame):
                                                                 "Time": time})
             self.panel_Sequencer.panelList[idx].timerList.append(timer)
 
-        print "TimerList", len(self.panel_Sequencer.panelList[idx].timerList)
-        print "MasterTimerDecode", self.panel_Sequencer.masterTimerDecoder
+        #print "TimerList", len(self.panel_Sequencer.panelList[idx].timerList)
+        #print "MasterTimerDecode", self.panel_Sequencer.masterTimerDecoder
         
 #-------------PUB/SUB CALLBACKS------------------
 
@@ -416,7 +416,6 @@ class FireControlFrame(wx.Frame):
             statusIdx = msg.index("S")
             channel = msg[1:statusIdx]
             status = msg[-1]
-            print status
             self.writeToRxLog("Channel fired: %s"%(channel))
             if self.operatingMode == "Test":
                 if status == "1":
@@ -436,7 +435,8 @@ class FireControlFrame(wx.Frame):
                 self.writeToRxLog("Remote set to Armed")
             else:
                 self.writeToRxLog("Error! Remote set to %s"%(msg[1]))
-
+        elif msg[0] == "D":
+            print "Serial Debug Message:", msg
         else:
             self.writeToRxLog("Unknown msg: %s"%(data))
         
@@ -463,7 +463,7 @@ class FireControlFrame(wx.Frame):
             
     def OnTimer_SequencerFire(self, event):
         id = event.GetId()
-        print self.panel_Sequencer.masterTimerDecoder
+        #print self.panel_Sequencer.masterTimerDecoder
         for item in self.panel_Sequencer.masterTimerDecoder:
             if item["Id"] == id:
                 sequencer = item["Sequencer"]
