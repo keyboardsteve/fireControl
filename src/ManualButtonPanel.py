@@ -12,7 +12,6 @@ class ManualButtonPanel(wx.Panel):
         self.numRows = numRows
         self.spacing = 5
         
-        #self.disabledBitmap = wx.Bitmap(os.path.join(os.getcwd(),'assets',"disabledMask.PNG"), wx.BITMAP_TYPE_PNG)
         self.__set_Properties()
         self.__do_layout()
         

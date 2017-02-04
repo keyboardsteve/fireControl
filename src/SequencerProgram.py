@@ -99,7 +99,7 @@ class SequencerProgram(wx.Panel):
         print "OnButton_Load: Loading Sequencer Bank %s"%(self.name)
         self.OnButton_Clear(event)
         path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(self.name))
-        notifyList = []
+        #notifyList = []
         with open(path, 'r') as file:
             for i, line in enumerate(file.readlines()):
                 channel, time = line.split(',')

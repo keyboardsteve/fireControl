@@ -45,10 +45,12 @@ class RenamePanel(wx.PopupWindow):
             self.Bind(wx.EVT_BUTTON, self.OnButton_Key, key)
         for key in self.digitButtons:
             self.Bind(wx.EVT_BUTTON, self.OnButton_Key, key)
+            
         self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_crlf)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_bksp)
         
         self.Bind(wx.EVT_BUTTON, self.OnButton_Shift, self.button_Shift)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_OK, self.button_OK)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Cancel, self.button_Cancel)
 
     def __set_properties(self):
@@ -85,6 +87,12 @@ class RenamePanel(wx.PopupWindow):
         self.SetSizer(sizer_1)
         sizer_1.Fit(self)
         self.Layout()
+
+    def OnButton_OK(self,event):
+        if self.input.GetValue().strip() == '':
+            wx.MessageBox('Blank Labels are not allowed', 'Error', wx.OK | wx.ICON_ERROR)
+        else:
+            event.Skip()
 
     def OnButton_Cancel(self, event):
         self.input.Clear()

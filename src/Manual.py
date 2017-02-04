@@ -5,6 +5,7 @@ import math
 
 import ManualButtonPanel
 import RenamePanel
+import os
 
 class Manual(wx.Panel):
     def __init__(self, parent, numButtons, numCols, numRows):
@@ -20,11 +21,14 @@ class Manual(wx.Panel):
         self.buttonList = []
         self.renamePanel = RenamePanel.RenamePanel(self)
         self.renamePanel.Hide()
+        self.enabledList = []
         
         self.button_Up = wx.Button(self, wx.ID_ANY, _("^"))
         self.staticTxt_Page = wx.StaticText(self, wx.ID_ANY, style = wx.ALIGN_CENTER_HORIZONTAL)
         self.button_Down = wx.Button(self, wx.ID_ANY, _("v"))
-        self.button_Rename = wx.Button(self, wx.ID_ANY, _("Rename\nButton"))
+        self.button_Rename = wx.Button(self, wx.ID_ANY, _("Rename Button"))
+        self.button_Save = wx.Button(self, wx.ID_ANY, _("Save Buttons"))
+        self.button_Load = wx.Button(self, wx.ID_ANY, _("Load Buttons"))
         self.rename = False
         
         self.defaultColor = self.button_Rename.GetBackgroundColour()
@@ -54,6 +58,8 @@ class Manual(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.OnButton_Page, self.button_Up)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Page, self.button_Down)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Rename, self.button_Rename)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Save, self.button_Save)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Load, self.button_Load)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Rename_OK, self.renamePanel.button_OK)
         
 
@@ -69,6 +75,8 @@ class Manual(wx.Panel):
         sizer_Page.Add(self.button_Up, 3, wx.EXPAND, 0)
         sizer_Page.Add(self.button_Down, 3, wx.EXPAND, 0)
         sizer_Page.Add(self.button_Rename, 1, wx.EXPAND, 0)
+        sizer_Page.Add(self.button_Load, 1, wx.EXPAND, 0)
+        sizer_Page.Add(self.button_Save, 1, wx.EXPAND, 0)
         sizer_Outer.Add(sizer_Page, 1, wx.EXPAND, 1)
         
         for panel in self.panelList:
@@ -97,9 +105,17 @@ class Manual(wx.Panel):
     def OnButton_Rename(self, event):
         if not self.rename:
             self.button_Rename.SetBackgroundColour(wx.NamedColour("YELLOW"))
+            self.enabledList = [button.IsEnabled() for button in self.buttonList]
+            for button in self.buttonList:
+                button.Enable()
             self.rename = True
         else:
             self.button_Rename.SetBackgroundColour(self.defaultColor)
+            for i, button in enumerate(self.buttonList):
+                if self.enabledList[i]:
+                    button.Enable()
+                else:
+                    button.Disable()
             self.rename = False
         
     def OnButton_SelectRename(self, event): #When selecting a fire button to rename
@@ -114,11 +130,32 @@ class Manual(wx.Panel):
     def OnButton_Rename_OK(self, event):
         c = int(self.renamePanel.channelNumber.GetLabel())
         label = self.renamePanel.input.GetValue()
-        self.buttonList[c-1].SetLabel(label)
-        self.renamePanel.input.Clear()
-        self.renamePanel.Hide()
+        if label != '':
+            self.buttonList[c-1].SetLabel(label)
+            self.renamePanel.input.Clear()
+            self.renamePanel.Hide()
         event.Skip()
         
+    def OnButton_Save(self, event):
+        file = os.path.join(os.getcwd(),"assets","mainLabels.txt")
+        with open(file,'w') as f:
+            for button in self.buttonList:
+                f.write("%s,%s\n"%(button.GetId(),button.GetLabel()))
+        
+        wx.MessageBox('Button names were saved.', 'Saved', wx.OK)
+        
+    def OnButton_Load(self, event): 
+        file = os.path.join(os.getcwd(),"assets","mainLabels.txt")
+        with open(file, 'r') as f:
+            for i, line in enumerate(f.readlines()):
+                channel, label = line.split(',')
+                self.buttonList[int(channel)-1].SetLabel(label)
+                
+        e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.renamePanel.button_OK.GetId())
+        e.SetEventObject(self.renamePanel.button_OK)
+        wx.PostEvent(self.GetEventHandler(), e)
+        #self.panel_Manual.renamePanel.button_OK
+    
     def hidePanels(self):
         for panel in self.panelList:
             panel.Hide()

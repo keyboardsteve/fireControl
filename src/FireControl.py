@@ -305,8 +305,7 @@ class FireControlFrame(wx.Frame):
             for i in range(sequencer.list_ctrl_Sequencer.GetItemCount()):
                 seqChannel = sequencer.list_ctrl_Sequencer.GetItem(i, 0).GetText()
                 newLabel = self.panel_Manual.buttonList[int(seqChannel)-1].GetLabel()
-                sequencer.list_ctrl_Sequencer.SetStringItem(i, 2, newLabel)
-            
+                sequencer.list_ctrl_Sequencer.SetStringItem(i, 1, newLabel)
 
 #-------------PUB/SUB CALLBACKS------------------
 
