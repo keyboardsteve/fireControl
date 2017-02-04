@@ -15,6 +15,7 @@ import Diagnostics
 import Manual
 import Sequencer
 import EditSequencer
+import FireTimer
 
 
 class FireControlFrame(wx.Frame):
@@ -28,7 +29,7 @@ class FireControlFrame(wx.Frame):
         self.heartbeatPeriod = 500 # in milliseconds
         self.heartbeatTimer = wx.Timer(self)
         self.heartbeatTimer.Start(self.heartbeatPeriod, False)
-        self.numSequencers = 7
+        self.numSequencers = 4
         
         self.serial = SerialComs.SerialComs(handler = "Receive_Coms")
         
@@ -78,21 +79,14 @@ class FireControlFrame(wx.Frame):
             self.Bind(wx.EVT_BUTTON, self.OnButton_Fire, button)
 
         for sequencer in self.panel_Sequencer.panelList:
-            self.Bind(wx.EVT_BUTTON, self.OnButton_Edit, sequencer.button_Edit)
-            self.Bind(wx.EVT_BUTTON, self.OnButton_Clear, sequencer.button_Clear)
-            self.Bind(wx.EVT_BUTTON, self.OnButton_Load, sequencer.button_Load)
-            self.Bind(wx.EVT_BUTTON, self.OnButton_Save, sequencer.button_Save)
             self.Bind(wx.EVT_BUTTON, self.OnButton_Play, sequencer.button_Sequencer_Play)
-            self.Bind(wx.EVT_BUTTON, self.OnButton_Stop, sequencer.button_Sequencer_Stop)
-            self.Bind(wx.EVT_BUTTON, self.OnButton_Reset, sequencer.button_Sequencer_Reset)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Add, sequencer.editWindow.button_Add)
+            self.Bind(wx.EVT_BUTTON, self.OnButton_Remove, sequencer.editWindow.button_Remove)
             sequencer.button_Sequencer_Stop.Disable()
             sequencer.button_Sequencer_Reset.Disable()
-        #self.panel_Sequencer.button_Edit.Bind(wx.EVT_BUTTON, self.OnButton_Edit)
         
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
         
-        self.subcsriber_Add = pub.subscribe(self.OnPubSub_Add, "Sequencer_Add")
-        self.subcsriber_Remove = pub.subscribe(self.OnPubSub_Remove, "Sequencer_Remove")
         self.subcsriber_Coms = pub.subscribe(self.OnPubSub_Coms, "Receive_Coms")
 
     def __set_properties(self):
@@ -218,176 +212,92 @@ class FireControlFrame(wx.Frame):
             else:
                 wx.MessageBox('Fire aborted.  The local and remote system mode are out of sync', 'Modes out of sync', wx.OK | wx.ICON_ERROR)
 
-    def OnButton_Edit(self, event):
-        name =  event.GetEventObject().GetName()
-        print "OnButton_Edit: Editing Sequencer Bank %s"%(name)
-        editWindow = EditSequencer.EditSequencer(self, name)
-        editWindow.Show()
-
-    def OnButton_Clear(self, event):
-        sequencer =  event.GetEventObject().GetName()
-        print "OnButton_Edit: Clearing Sequencer Bank %s"%(sequencer)
-        option = ['A','B','C','D']
-        letter = sequencer[-1]
-        idx = option.index(letter)
-        self.OnButton_Reset(event)
-        self.panel_Sequencer.panelList[idx].button_Save.Enable()
-        self.panel_Sequencer.panelList[idx].button_Load.Enable()
-        listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
-        for i in range(listcontrol.GetItemCount()):
-            item = listcontrol.GetItem(0)
-            channel = item.GetText()
-            self.panel_Manual.buttonList[int(channel)-1].Enable()
-            row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, channel)
-            self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
-            self.panel_Sequencer.panelList[idx].timerList.pop(row)
-            for timerDecode in self.panel_Sequencer.masterTimerDecoder:
-                if timerDecode["Sequencer"] == letter and timerDecode["Channel"] == int(channel):
-                    self.panel_Sequencer.masterTimerDecoder.remove(timerDecode)
-        
-    def OnButton_Load(self, event):
-        sequencer =  event.GetEventObject().GetName()
-        print "OnButton_Load: Loading Sequencer Bank %s"%(sequencer)
-        letter = sequencer[-1] # Gets the last letter of the sequencer "Load_A", "Load_B", etc...
-        self.OnButton_Clear(event)
-        path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(letter))
-        with open(path, 'r') as file:
-            for line in file.readlines():
-                channel, time = line.split(',')
-                self.OnPubSub_Add("Edit_%s"%(letter), int(channel), float(time))
-                
-    def OnButton_Save(self, event):
-        sequencer =  event.GetEventObject().GetName()
-        print "OnButton_Save: Saving Sequencer Bank %s"%(sequencer)
-        option = ['A','B','C','D']
-        letter = sequencer[-1]
-        idx = option.index(letter)
-        path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(letter))
-        with open(path, 'w') as file:
-            for i in range(self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItemCount()):
-                channel = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 0).GetText()
-                time = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText()
-                file.write("%s,%s\n"%(channel, time))
-        wx.MessageBox('This sequence was saved', 'Finished', wx.OK | wx.STAY_ON_TOP)
-        
     def OnButton_Play(self, event):
         if self.operatingMode == "Armed" or self.operatingMode == "Test":
-            sequencer =  event.GetEventObject().GetName()
-            print "OnButton_Play: Playing Sequencer Bank %s"%(sequencer)
-            option = ['A','B','C','D']
-            letter = sequencer[-1]
-            idx = option.index(letter)
-            
+            id = event.GetEventObject().GetId()
+            #Find which panel threw it
+            for i, seq in enumerate(self.panel_Sequencer.panelList):
+                if seq.button_Sequencer_Play.GetId() == id:
+                    idx = i
+                    break;
+            sequencer = self.panel_Sequencer.panelList[idx]
             # Disable the play button, so you cannot hit it twice...
-            self.panel_Sequencer.panelList[idx].button_Sequencer_Play.Disable()
-            self.panel_Sequencer.panelList[idx].button_Sequencer_Stop.Enable()
-            self.panel_Sequencer.panelList[idx].button_Sequencer_Reset.Disable()
-            self.panel_Sequencer.panelList[idx].button_Load.Disable()
-            self.panel_Sequencer.panelList[idx].button_Save.Disable()
-            self.panel_Sequencer.panelList[idx].startTime = time.time()
-            if self.panel_Sequencer.panelList[idx].stopTime is None:
-                self.panel_Sequencer.panelList[idx].stopTime = time.time()
-            for i, timer in enumerate(self.panel_Sequencer.panelList[idx].timerList):
-                targetTime = float(self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText())
-                delay = self.panel_Sequencer.panelList[idx].stopTime - self.panel_Sequencer.panelList[idx].startTime
+            sequencer.button_Sequencer_Play.Disable()
+            sequencer.button_Sequencer_Stop.Enable()
+            sequencer.button_Sequencer_Reset.Disable()
+            sequencer.button_Load.Disable()
+            sequencer.button_Save.Disable()
+            sequencer.startTime = time.time()
+            if sequencer.stopTime is None:
+                sequencer.stopTime = time.time()
+            for i, timer in enumerate(sequencer.timerList):
+                targetTime = float(sequencer.list_ctrl_Sequencer.GetItem(i, 2).GetText())
+                delay = sequencer.stopTime - sequencer.startTime
                 scheduledTime = targetTime + delay
-                print "Delay:", delay, "Scheduled Time:", scheduledTime
+                #print "Delay:", delay, "Scheduled Time:", scheduledTime
                 if scheduledTime >= 0.0: # If the scheduled time happens in the future
                     self.Bind(wx.EVT_TIMER, self.OnTimer_SequencerFire, timer)
                     delayinms = int(float(scheduledTime)*1000)
                     timer.Start(delayinms, oneShot=True)
         else:
             wx.MessageBox('System is in Safety.  Please change mode to "Test" to test all channels.', 'Safety first...', wx.OK)
-        
-    def OnButton_Stop(self, event):
-        sequencer =  event.GetEventObject().GetName()
-        print "OnButton_Stopping: Stopping Sequencer Bank %s"%(sequencer)
-        option = ['A','B','C','D']
-        letter = sequencer[-1]
-        idx = option.index(letter)
-        self.panel_Sequencer.panelList[idx].button_Sequencer_Play.Enable()
-        self.panel_Sequencer.panelList[idx].button_Sequencer_Stop.Disable()
-        self.panel_Sequencer.panelList[idx].button_Sequencer_Reset.Enable()
-        for timer in self.panel_Sequencer.panelList[idx].timerList:
-            if timer.IsRunning():
-                timer.Stop()
-        self.panel_Sequencer.panelList[idx].stopTime = time.time()
-         
-    def OnButton_Reset(self, event):
-        sequencer =  event.GetEventObject().GetName()
-        print "OnButton_Reset: Resetting Sequencer Bank %s"%(sequencer)
-        option = ['A','B','C','D']
-        letter = sequencer[-1]
-        idx = option.index(letter)
-        
-        self.panel_Sequencer.panelList[idx].button_Sequencer_Play.Enable()
-        self.panel_Sequencer.panelList[idx].button_Sequencer_Stop.Disable()
-        self.panel_Sequencer.panelList[idx].button_Sequencer_Reset.Disable()
-        self.panel_Sequencer.panelList[idx].startTime = time.time()
-        self.panel_Sequencer.panelList[idx].stopTime = None
-        # Need to flush out all of the masterTimerList entries for that sequencer
-        # Need to Stop all of the timers in the masterTimerList
-        for timer in self.panel_Sequencer.panelList[idx].timerList:
-            if timer.IsRunning():
-                timer.Stop()
-            for i, timerDecode in enumerate(self.panel_Sequencer.masterTimerDecoder):
-                if timerDecode["Id"] == timer.GetId():
-                    self.panel_Sequencer.masterTimerDecoder.pop(i)
-        self.panel_Sequencer.panelList[idx].timerList = []
-        self.panel_Sequencer.panelList[idx].startTime = 0.0
-        # Need to clear out all of the "FIRED" entries
-        listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
-        for i in range(listcontrol.GetItemCount()):
-            #print i
-            listcontrol.SetStringItem(i, 2, "")
-        # Need to Requeue all of the sequencer's timers again from the ListControl
-        # Need to Requeue all of the timers into the masterTimerList
-            channel = int(self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 0).GetText())
-            delay = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.GetItem(i, 1).GetText()
-            timer = wx.Timer(self)
-            self.panel_Sequencer.masterTimerDecoder.append({"Id":timer.GetId(),
-                                                                "Sequencer": letter,
-                                                                "Channel": channel,
-                                                                "Time": time})
-            self.panel_Sequencer.panelList[idx].timerList.append(timer)
+    
+    def OnButton_Add(self, event):
+        id = event.GetEventObject().GetId()
+        #Find which panel threw it
+        for i, seq in enumerate(self.panel_Sequencer.panelList):
+            if seq.editWindow.button_Add.GetId() == id:
+                idx = i
+                break;
+        sequencer = self.panel_Sequencer.panelList[idx]
+        if not (sequencer.editWindow.text_ctrl_Channel.GetValue() == '' or sequencer.editWindow.text_ctrl_Time.GetValue() == ''):
+            c = int(sequencer.editWindow.text_ctrl_Channel.GetValue())
+            t = float(sequencer.editWindow.text_ctrl_Time.GetValue())
+            l = self.panel_Manual.buttonList[c-1].GetLabel()
+        else:
+            wx.MessageBox('Please enter both a channel and time when adding an item.', 'Error', wx.OK | wx.ICON_ERROR)
+            
+        try:
+            if self.panel_Manual.buttonList[c-1].IsEnabled():
+                self.panel_Manual.buttonList[c-1].Disable()
+                self.panel_Manual.buttonList[c-1].SetBackgroundColour(wx.NamedColour("GREY"))
+                sequencer.list_ctrl_Sequencer.Append([str(c), l, str(t), ""])
+                sequencer.editWindow.text_ctrl_Channel.Clear()
+                sequencer.editWindow.text_ctrl_Time.Clear()
+                timer = FireTimer.FireTimer(self, c, t)
+                sequencer.timerList.append(timer)
+            else:
+                wx.MessageBox('The channel %s is already in use elsewhere.'%(c), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
+        except IndexError:
+                wx.MessageBox('The channel %s does not exist.'%(c), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
 
-        #print "TimerList", len(self.panel_Sequencer.panelList[idx].timerList)
-        #print "MasterTimerDecode", self.panel_Sequencer.masterTimerDecoder
+    def OnButton_Remove(self, event):
+        print "OnButton_Remove"
+        id = event.GetEventObject().GetId()
+        #Find which panel threw it
+        for i, seq in enumerate(self.panel_Sequencer.panelList):
+            if seq.editWindow.button_Remove.GetId() == id:
+                idx = i
+                break;
+        sequencer = self.panel_Sequencer.panelList[idx]
+        #print sequencer.editWindow.text_ctrl_Channel.GetValue()
+        if not (sequencer.editWindow.text_ctrl_Channel.GetValue() == ''):
+            c = int(sequencer.editWindow.text_ctrl_Channel.GetValue())
+            sequencer.editWindow.text_ctrl_Channel.Clear()
+            sequencer.editWindow.text_ctrl_Time.Clear()
+            for j, timer in enumerate(sequencer.timerList):
+                if timer.GetChannel() == c:
+                    sequencer.timerList.pop(j)
+                    break
+        else:
+            wx.MessageBox('Please enter a channel when removing an item', 'Error', wx.OK | wx.ICON_ERROR)
+        
+        row = sequencer.list_ctrl_Sequencer.FindItem(-1, str(c))
+        sequencer.list_ctrl_Sequencer.DeleteItem(row)
+        self.panel_Manual.buttonList[c-1].Enable()
+        self.panel_Manual.buttonList[c-1].SetBackgroundColour(wx.NamedColour("YELLOW"))
         
 #-------------PUB/SUB CALLBACKS------------------
-
-    def OnPubSub_Add(self, sequencer, channel, time):
-        item = [channel, self.panel_Manual.buttonList[channel-1].GetLabel(), time]
-        option = ['A','B','C','D']
-        letter = sequencer[-1]
-        idx = option.index(letter)
-            
-        #Disable the button in the manual panel
-        try:
-            if self.panel_Manual.buttonList[channel-1].IsEnabled():
-                self.panel_Manual.buttonList[channel-1].Disable()
-                self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.Append(item)
-                timer = wx.Timer(self)
-                self.panel_Sequencer.masterTimerDecoder.append({"Id":timer.GetId(),
-                                                                "Sequencer": letter,
-                                                                "Channel": channel,
-                                                                "Time": time})
-                self.panel_Sequencer.panelList[idx].timerList.append(timer)
-            else:
-                wx.MessageBox('The channel %s is already in use elsewhere.'%(channel), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
-        except IndexError:
-                wx.MessageBox('The channel %s does not exist.'%(channel), 'Used Channel', wx.OK | wx.ICON_ERROR | wx.STAY_ON_TOP)
-
-    def OnPubSub_Remove(self, sequencer, channel):
-        item = str(channel)
-        option = ['A','B','C','D']
-        letter = sequencer[-1]
-        idx = option.index(letter)
-
-        row = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.FindItem(-1, item)
-        self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer.DeleteItem(row)
-        self.panel_Sequencer.panelList[idx].timerList.pop(row)
-        self.panel_Manual.buttonList[channel-1].Enable()
 
     def OnPubSub_Coms(self, data):
         msg = data.strip()
@@ -461,36 +371,20 @@ class FireControlFrame(wx.Frame):
         self.communicationStatus = "Failure"
         self.FireControl_Frame_statusbar.SetStatusText("Communication: %s"%(self.communicationStatus), 0)
         
-            
     def OnTimer_SequencerFire(self, event):
         id = event.GetId()
-        #print self.panel_Sequencer.masterTimerDecoder
-        for item in self.panel_Sequencer.masterTimerDecoder:
-            if item["Id"] == id:
-                sequencer = item["Sequencer"]
-                channel = item["Channel"]
-                option = ['A','B','C','D']
-                letter = sequencer[-1]
-                idx = option.index(letter)
-                listcontrol = self.panel_Sequencer.panelList[idx].list_ctrl_Sequencer
-                #print listcontrol.GetItemCount()
-                #print "channel", channel
-                row = listcontrol.FindItem(-1, str(channel))
-                #print "row", row
-                listcontrol.SetStringItem(row, 2, "FIRED")
-                print "OnTimer_SequencerFire: Fire command for sequencer %s, channel %s"%(sequencer, channel)
-                
-                ''' Holy cow, this works.  To fire the channel, I wanted to "virtually" press a button on the Manual page.  Obviously
-                this couldn't be done with a mouse click, so I manually created the event that would have been generated by the click,
-                and then assigned the button on the Manual page as the event object, then posted it!
-                '''
-                e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.panel_Manual.buttonList[channel-1].GetId())
-                e.SetEventObject(self.panel_Manual.buttonList[channel-1])
-                wx.PostEvent(self.GetEventHandler(), e)
-                break
-        self.panel_Sequencer.masterTimerDecoder.remove(item)
-            
-        
+        for i, sequencer in enumerate(self.panel_Sequencer.panelList):
+            for timer in sequencer.timerList:
+                if id == timer.GetId():
+                    channel = timer.GetChannel()
+                    idx = i
+                    break
+        panel = self.panel_Sequencer.panelList[idx]
+        row = panel.list_ctrl_Sequencer.FindItem(-1, str(channel))
+        panel.list_ctrl_Sequencer.SetStringItem(row, 3, "FIRED")
+        e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.panel_Manual.buttonList[channel-1].GetId())
+        e.SetEventObject(self.panel_Manual.buttonList[channel-1])
+        wx.PostEvent(self.GetEventHandler(), e)
                     
 #--------------HELPER FUNCTIONS----------------
     def writeToTxLog(self, msg):

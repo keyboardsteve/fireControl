@@ -51,8 +51,8 @@ class EditSequencer(wx.PopupWindow):
         self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_9)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_0)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_dot)
-        self.Bind(wx.EVT_BUTTON, self.OnButton_Add, self.button_Add)
-        self.Bind(wx.EVT_BUTTON, self.OnButton_Remove, self.button_Remove)
+        #self.Bind(wx.EVT_BUTTON, self.OnButton_Add, self.button_Add)
+        #self.Bind(wx.EVT_BUTTON, self.OnButton_Remove, self.button_Remove)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Close, self.button_Close)
         
         #was ex.EVT_SET_FOCUS
@@ -118,17 +118,19 @@ class EditSequencer(wx.PopupWindow):
                         self.focus.AppendText(label)
                     except:
                         print "No text field selected!"
-
+    '''
     def OnButton_Add(self, event):
         if not (self.text_ctrl_Channel.GetValue() == '' or self.text_ctrl_Time.GetValue() == ''):
             c = int(self.text_ctrl_Channel.GetValue())
             t = float(self.text_ctrl_Time.GetValue())
-            pub.sendMessage("Sequencer_Add", sequencer = self.name, channel = c, time = t)
+            #pub.sendMessage("Sequencer_Add", channel = c, time = t)
             self.text_ctrl_Channel.Clear()
             self.text_ctrl_Time.Clear()
         else:
             wx.MessageBox('Please enter both a channel and time when adding an item.', 'Error', wx.OK | wx.ICON_ERROR)
-
+            event.skip()
+    '''
+    '''
     def OnButton_Remove(self, event):
         if not (self.text_ctrl_Channel.GetValue() == ''):
             c = int(self.text_ctrl_Channel.GetValue())
@@ -137,9 +139,11 @@ class EditSequencer(wx.PopupWindow):
             self.text_ctrl_Time.Clear()
         else:
             wx.MessageBox('Please enter a channel when removing an item', 'Error', wx.OK | wx.ICON_ERROR)
+    '''
 
     def OnButton_Close(self, event):
-        self.Destroy()
+        #self.Destroy()
+        self.Hide()
         
     def OnCursor_Channel(self, event):
         self.focus = self.text_ctrl_Channel

@@ -11,7 +11,6 @@ class Sequencer(wx.Panel):
         
         self.masterTimerDecoder = []
         self.buttonList = []
-        self.sequencerList = []
         self.panelList = []
         
         for i in range(self.numSequencers):

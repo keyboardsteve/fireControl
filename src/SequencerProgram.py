@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
 import wx
+from wx.lib.pubsub import pub
 
 import gettext
-
+import os
 import time
+
+import EditSequencer
+import FireTimer
 
 class SequencerProgram(wx.Panel):
     def __init__(self, parent, name):
@@ -15,6 +19,7 @@ class SequencerProgram(wx.Panel):
         self.timerList = []
         self.startTime = time.time()
         self.stopTime = None
+        self.loadDelay = 250
         
         self.panel_SequencerProgram = wx.Panel(self, wx.ID_ANY)
         self.button_Sequencer_Play = wx.Button(self.panel_SequencerProgram, wx.ID_ANY, _("Play"))
@@ -35,10 +40,18 @@ class SequencerProgram(wx.Panel):
         self.button_Edit = wx.Button(self.panel_Sequencer_Editor, wx.ID_ANY, _("Edit"))
         self.button_Edit.SetName("Edit_%s"%(name))
         self.list_ctrl_Sequencer = wx.ListCtrl(self.panel_Sequencer_Editor, wx.ID_ANY, style=wx.LC_REPORT|wx.BORDER_SUNKEN)
+        
+        self.editWindow = EditSequencer.EditSequencer(self, self.name)
 
         self.__set_properties()
         self.__do_layout()
-        # end wxGlade
+        
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Clear, self.button_Clear)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Stop, self.button_Sequencer_Stop)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Reset, self.button_Sequencer_Reset)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Save, self.button_Save)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Load, self.button_Load)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Edit, self.button_Edit)
 
     def __set_properties(self):
         # begin wxGlade: SequencerProgram.__set_properties
@@ -75,6 +88,80 @@ class SequencerProgram(wx.Panel):
         sizer_Outer.Add(self.panel_SequencerProgram, 6, wx.EXPAND, 0)
         self.SetSizer(sizer_Outer)
         sizer_Outer.Fit(self)
-        # end wxGlade
 
-# end of class SequencerProgram
+
+    def OnButton_Edit(self, event):
+        print "OnButton_Edit: Editing Sequencer Bank %s"%(self.name)
+        #editWindow = EditSequencer.EditSequencer(self, self.name)
+        self.editWindow.Show()
+
+    def OnButton_Load(self, event):
+        print "OnButton_Load: Loading Sequencer Bank %s"%(self.name)
+        self.OnButton_Clear(event)
+        path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(self.name))
+        notifyList = []
+        with open(path, 'r') as file:
+            for i, line in enumerate(file.readlines()):
+                channel, time = line.split(',')
+                wx.CallLater(self.loadDelay * i, self.loadHelper, channel, time)
+
+    def OnButton_Clear(self, event):
+        print "OnButton_Edit: Clearing Sequencer Bank %s"%(self.name)
+
+        self.button_Save.Enable()
+        self.button_Load.Enable()
+        for i in range(self.list_ctrl_Sequencer.GetItemCount()):
+            item = self.list_ctrl_Sequencer.GetItem(i)
+            channel = item.GetText()
+            wx.CallLater(self.loadDelay * i, self.clearHelper, channel)
+            
+    def loadHelper(self, c, t):
+        self.editWindow.text_ctrl_Channel.SetValue(str(c))
+        self.editWindow.text_ctrl_Time.SetValue(str(t))
+        e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.editWindow.button_Add.GetId())
+        e.SetEventObject(self.editWindow.button_Add)
+        wx.PostEvent(self.GetEventHandler(), e)
+        
+    def clearHelper(self, c):
+        self.editWindow.text_ctrl_Channel.SetValue(str(c))
+        e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.editWindow.button_Remove.GetId())
+        e.SetEventObject(self.editWindow.button_Remove)
+        wx.PostEvent(self.GetEventHandler(), e)
+
+    def OnButton_Save(self, event):
+        print "OnButton_Save: Saving Sequencer Bank %s"%(self.name)
+        path = os.path.join(os.getcwd(),"assets","Sequencer_%s.txt"%(self.name))
+        with open(path, 'w') as file:
+            for i in range(self.list_ctrl_Sequencer.GetItemCount()):
+                channel = self.list_ctrl_Sequencer.GetItem(i, 0).GetText()
+                time = self.list_ctrl_Sequencer.GetItem(i, 2).GetText()
+                file.write("%s,%s\n"%(channel, time))
+        wx.MessageBox('This sequence was saved', 'Finished', wx.OK | wx.STAY_ON_TOP)
+        
+    def OnButton_Stop(self, event):
+        print "OnButton_Stopping: Stopping Sequencer Bank %s"%(self.name)
+        self.button_Sequencer_Play.Enable()
+        self.button_Sequencer_Stop.Disable()
+        self.button_Sequencer_Reset.Enable()
+        for timer in self.timerList:
+            if timer.IsRunning():
+                timer.Stop()
+        self.stopTime = time.time()
+         
+    def OnButton_Reset(self, event):
+        print "OnButton_Reset: Resetting Sequencer Bank %s"%(self.name)
+        
+        self.button_Sequencer_Play.Enable()
+        self.button_Sequencer_Stop.Disable()
+        self.button_Sequencer_Reset.Disable()
+        self.startTime = time.time()
+        self.stopTime = None
+
+        for timer in self.timerList:
+            if timer.IsRunning():
+                timer.Stop()
+
+        self.startTime = 0.0
+        # Need to clear out all of the "FIRED" entries
+        for i in range(self.list_ctrl_Sequencer.GetItemCount()):
+            self.list_ctrl_Sequencer.SetStringItem(i, 3, "")
