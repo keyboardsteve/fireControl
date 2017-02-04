@@ -85,7 +85,10 @@ class FireControlFrame(wx.Frame):
             sequencer.button_Sequencer_Stop.Disable()
             sequencer.button_Sequencer_Reset.Disable()
         
+        self.Bind(wx.EVT_BUTTON, self.propegateButtonLabelChanges, self.panel_Manual.renamePanel.button_OK)
+        
         self.Bind(wx.EVT_TIMER, self.OnTimer_Heartbeat, self.heartbeatTimer)
+        
         
         self.subcsriber_Coms = pub.subscribe(self.OnPubSub_Coms, "Receive_Coms")
 
@@ -296,7 +299,15 @@ class FireControlFrame(wx.Frame):
         sequencer.list_ctrl_Sequencer.DeleteItem(row)
         self.panel_Manual.buttonList[c-1].Enable()
         self.panel_Manual.buttonList[c-1].SetBackgroundColour(wx.NamedColour("YELLOW"))
-        
+
+    def propegateButtonLabelChanges(self, event):
+        for sequencer in self.panel_Sequencer.panelList:
+            for i in range(sequencer.list_ctrl_Sequencer.GetItemCount()):
+                seqChannel = sequencer.list_ctrl_Sequencer.GetItem(i, 0).GetText()
+                newLabel = self.panel_Manual.buttonList[int(seqChannel)-1].GetLabel()
+                sequencer.list_ctrl_Sequencer.SetStringItem(i, 2, newLabel)
+            
+
 #-------------PUB/SUB CALLBACKS------------------
 
     def OnPubSub_Coms(self, data):
