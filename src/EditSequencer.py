@@ -118,28 +118,6 @@ class EditSequencer(wx.PopupWindow):
                         self.focus.AppendText(label)
                     except:
                         print "No text field selected!"
-    '''
-    def OnButton_Add(self, event):
-        if not (self.text_ctrl_Channel.GetValue() == '' or self.text_ctrl_Time.GetValue() == ''):
-            c = int(self.text_ctrl_Channel.GetValue())
-            t = float(self.text_ctrl_Time.GetValue())
-            #pub.sendMessage("Sequencer_Add", channel = c, time = t)
-            self.text_ctrl_Channel.Clear()
-            self.text_ctrl_Time.Clear()
-        else:
-            wx.MessageBox('Please enter both a channel and time when adding an item.', 'Error', wx.OK | wx.ICON_ERROR)
-            event.skip()
-    '''
-    '''
-    def OnButton_Remove(self, event):
-        if not (self.text_ctrl_Channel.GetValue() == ''):
-            c = int(self.text_ctrl_Channel.GetValue())
-            pub.sendMessage("Sequencer_Remove", sequencer = self.name, channel = c)
-            self.text_ctrl_Channel.Clear()
-            self.text_ctrl_Time.Clear()
-        else:
-            wx.MessageBox('Please enter a channel when removing an item', 'Error', wx.OK | wx.ICON_ERROR)
-    '''
 
     def OnButton_Close(self, event):
         #self.Destroy()
