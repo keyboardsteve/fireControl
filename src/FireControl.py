@@ -28,6 +28,7 @@ class FireControlFrame(wx.Frame):
         self.heartbeatPeriod = 500 # in milliseconds
         self.heartbeatTimer = wx.Timer(self)
         self.heartbeatTimer.Start(self.heartbeatPeriod, False)
+        self.numSequencers = 7
         
         self.serial = SerialComs.SerialComs(handler = "Receive_Coms")
         
@@ -50,7 +51,7 @@ class FireControlFrame(wx.Frame):
         self.panel_OperatingMode = OperatingMode.OperatingMode(self)
         self.panel_Diagnostics = Diagnostics.Diagnostics(self)
         self.panel_Manual = Manual.Manual(self, numButtons=self.numberFireChannels, numCols=self.manualFireCols, numRows=self.manualFireRows)
-        self.panel_Sequencer = Sequencer.Sequencer(self)
+        self.panel_Sequencer = Sequencer.Sequencer(self, self.numSequencers)
         self.modePanelList = [self.panel_OperatingMode,
                               self.panel_Diagnostics,
                               self.panel_Manual,
@@ -356,7 +357,7 @@ class FireControlFrame(wx.Frame):
 #-------------PUB/SUB CALLBACKS------------------
 
     def OnPubSub_Add(self, sequencer, channel, time):
-        item = [channel, time]
+        item = [channel, self.panel_Manual.buttonList[channel-1].GetLabel(), time]
         option = ['A','B','C','D']
         letter = sequencer[-1]
         idx = option.index(letter)

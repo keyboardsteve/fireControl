@@ -11,6 +11,7 @@ class SequencerProgram(wx.Panel):
         # begin wxGlade: SequencerProgram.__init__
         wx.Panel.__init__(self, parent=parent, name = name)
         
+        self.name = name
         self.timerList = []
         self.startTime = time.time()
         self.stopTime = None
@@ -42,13 +43,14 @@ class SequencerProgram(wx.Panel):
     def __set_properties(self):
         # begin wxGlade: SequencerProgram.__set_properties
         self.list_ctrl_Sequencer.InsertColumn(0, "Channel")
-        self.list_ctrl_Sequencer.InsertColumn(1, "Time")
-        self.list_ctrl_Sequencer.InsertColumn(2, "Executed")
+        self.list_ctrl_Sequencer.InsertColumn(1, "Label")
+        self.list_ctrl_Sequencer.InsertColumn(2, "Time")
+        self.list_ctrl_Sequencer.InsertColumn(3, "Executed")
         # end wxGlade
 
     def __do_layout(self):
         # begin wxGlade: SequencerProgram.__do_layout
-        sizer_Outer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Sequencer")), wx.HORIZONTAL)
+        sizer_Outer = wx.StaticBoxSizer(wx.StaticBox(self, wx.ID_ANY, _("Sequencer %s"%(self.name))), wx.HORIZONTAL)
         sizer_Sequencer = wx.BoxSizer(wx.HORIZONTAL)
         sizer_Sequencer_Editor = wx.BoxSizer(wx.VERTICAL)
         grid_sizer_Sequencer_Buttons = wx.GridSizer(2, 2, 0, 0)
