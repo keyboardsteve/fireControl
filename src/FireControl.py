@@ -16,6 +16,7 @@ import Manual
 import Sequencer
 import EditSequencer
 import FireTimer
+import TestAll
 
 
 class FireControlFrame(wx.Frame):
@@ -23,7 +24,7 @@ class FireControlFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         
         self.communicationStatus = "Failure"
-        self.numberFireChannels = 128
+        self.numberFireChannels = 10*8
         self.manualFireCols = 4
         self.manualFireRows = 4
         self.heartbeatPeriod = 500 # in milliseconds
@@ -35,7 +36,7 @@ class FireControlFrame(wx.Frame):
         
         self.remoteOperatingMode = "Unknown"
                 
-        self.testList = [None]*self.numberFireChannels
+        #self.testList = [None]*self.numberFireChannels
         self.currentPanel = "Mode"
         
         self.button_Mode = wx.Button(self, wx.ID_ANY, _("Mode"))
@@ -60,6 +61,8 @@ class FireControlFrame(wx.Frame):
         
         self.operatingMode = self.panel_OperatingMode.operatingMode
         self.FireControl_Frame_statusbar = self.CreateStatusBar(3)
+        
+        self.testAllRoutine = TestAll.TestAll(self, self.panel_Manual.buttonList)
         
         self.__set_properties()
         self.__do_layout()
@@ -178,6 +181,11 @@ class FireControlFrame(wx.Frame):
             ###ADDCODE
             # This need to send the proper message and receive a result before moving onto the next test
             if self.remoteOperatingMode == "Test":
+                if self.testAllRoutine.is_alive():
+                    self.testAllRoutine._stop.set()
+                self.testAllRoutine = TestAll.TestAll(self, self.panel_Manual.buttonList)
+                self.testAllRoutine.start()
+                '''
                 for channel in range(1, self.numberFireChannels + 1):
                     print "OnButton_TestAll: Testing channel number", channel
                     self.panel_Diagnostics.text_ctrl_TestAll.AppendText("Testing channel number %s "%(channel))
@@ -185,23 +193,25 @@ class FireControlFrame(wx.Frame):
                     self.serial.send("F%s"%(channel))
                     done = False
                     
-                    '''
+                    
                     if self.testList[channel-1]:
                         self.panel_Diagnostics.text_ctrl_TestAll.AppendText("PASS")
                         self.changeFireButtonColor(channel, "GREEN")
                     else:
                         self.panel_Diagnostics.text_ctrl_TestAll.AppendText("FAIL")
                         self.changeFireButtonColor(channel, "RED")
-                    '''
+                    
                         
                     self.panel_Diagnostics.text_ctrl_TestAll.AppendText("\n")
                     self.panel_Diagnostics.gauge_TestAll.SetValue(int(float(channel)/float(self.numberFireChannels)*100.0))
-                if all(testList):
-                    wx.MessageBox('Test Completed.  All channels passed!', 'Test Complete', wx.OK)
-                else:
-                    failedChannels = [self.testList.index(x)+1 for x in self.testList if x == False]
-                    wx.MessageBox('Test Completed.  Some channels failed!\nPlease check the logs for more information.\n\
-                                   Failed channels: %s', 'Test Complete'%(','.join(failedChannels)), wx.OK | wx.ICON_ERROR)
+                '''
+                
+                #if all(testList):
+                #    wx.MessageBox('Test Completed.  All channels passed!', 'Test Complete', wx.OK)
+                #else:
+                #    failedChannels = [self.testList.index(x)+1 for x in self.testList if x == False]
+                #    wx.MessageBox('Test Completed.  Some channels failed!\nPlease check the logs for more information.\n\
+                #                   Failed channels: %s', 'Test Complete'%(','.join(failedChannels)), wx.OK | wx.ICON_ERROR)
             else:
                 wx.MessageBox('Test aborted.  The local and remote system mode are out of sync', 'Modes out of sync', wx.OK | wx.ICON_ERROR)
 
@@ -339,12 +349,14 @@ class FireControlFrame(wx.Frame):
             status = msg[-1]
             self.writeToRxLog("Channel fired: %s"%(channel))
             if self.operatingMode == "Test":
+                self.testAllRoutine.setResult(msg)
                 if status == "1":
                     self.panel_Manual.buttonList[int(channel)-1].SetBackgroundColour(wx.NamedColour("Green"))
-                    self.testList[int(channel)-1] = True
+                    #self.testList[int(channel)-1] = True
+    
                 elif status == "0":
                     self.panel_Manual.buttonList[int(channel)-1].SetBackgroundColour(wx.NamedColour("RED"))
-                    self.testList[int(channel)-1] = False
+                    #self.testList[int(channel)-1] = False
             elif self.operatingMode == "Armed":
                 self.panel_Manual.buttonList[int(channel)-1].SetBackgroundColour(wx.NamedColour("RED"))
         elif msg[0] == "O":

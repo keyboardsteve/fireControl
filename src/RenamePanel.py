@@ -31,8 +31,8 @@ class RenamePanel(wx.PopupWindow):
         for character in string.digits:
             self.digitButtons.append(wx.Button(self.panel_1, wx.ID_ANY, _(character)))
                                      
-        self.button_Shift = wx.Button(self.panel_1, wx.ID_ANY, _("^"))
-        self.button_crlf = wx.Button(self.panel_1, wx.ID_ANY, _("<-'"))
+        self.button_Shift = wx.Button(self.panel_1, wx.ID_ANY, _("Shift"))
+        self.button_space = wx.Button(self.panel_1, wx.ID_ANY, _("Space"))
         self.button_bksp = wx.Button(self.panel_1, wx.ID_ANY, _("<"))                     
         
         self.button_OK = wx.Button(self, wx.ID_ANY, _("OK"))
@@ -46,7 +46,7 @@ class RenamePanel(wx.PopupWindow):
         for key in self.digitButtons:
             self.Bind(wx.EVT_BUTTON, self.OnButton_Key, key)
             
-        self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_crlf)
+        self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_space)
         self.Bind(wx.EVT_BUTTON, self.OnButton_Key, self.button_bksp)
         
         self.Bind(wx.EVT_BUTTON, self.OnButton_Shift, self.button_Shift)
@@ -75,7 +75,7 @@ class RenamePanel(wx.PopupWindow):
         for button in self.digitButtons:
             grid_sizer_1.Add(button, 1, wx.EXPAND, 0)
         grid_sizer_1.Add(self.button_Shift, 1, wx.EXPAND, 0)
-        grid_sizer_1.Add(self.button_crlf, 1, wx.EXPAND, 0)
+        grid_sizer_1.Add(self.button_space, 1, wx.EXPAND, 0)
         grid_sizer_1.Add(self.button_bksp, 1, wx.EXPAND, 0)
         
         sizer_2.Add(grid_sizer_1, 4, 0, 0)
@@ -99,11 +99,10 @@ class RenamePanel(wx.PopupWindow):
         self.Hide()
         
     def OnButton_Key(self, event):
-        print "Insert logic here"
         e = event.GetEventObject()
         
-        if e.GetId() == self.button_crlf.GetId():
-            self.input.AppendText('\n')
+        if e.GetId() == self.button_space.GetId():
+            self.input.AppendText(' ')
         elif e.GetId() == self.button_bksp.GetId():
             self.input.SetValue(self.input.GetValue()[:-1])
         else:

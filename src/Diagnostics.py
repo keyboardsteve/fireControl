@@ -2,9 +2,9 @@
 
 
 import wx
-
-
 import gettext
+
+import TestAll
 
 
 class Diagnostics(wx.Panel):
@@ -18,9 +18,11 @@ class Diagnostics(wx.Panel):
         self.button_TestAll = wx.Button(self, wx.ID_ANY, _("Test All"))
         self.gauge_TestAll = wx.Gauge(self, wx.ID_ANY, 100)
         self.text_ctrl_TestAll = wx.TextCtrl(self, wx.ID_ANY, "", style=wx.TE_MULTILINE)
+        
 
         self.__set_properties()
         self.__do_layout()
+        
 
 
     def __set_properties(self):
@@ -49,4 +51,3 @@ class Diagnostics(wx.Panel):
         self.SetSizer(sizer_Outer)
         sizer_Outer.Fit(self)
         self.Layout()
-

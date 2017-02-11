@@ -140,7 +140,7 @@ class Manual(wx.Panel):
         file = os.path.join(os.getcwd(),"assets","mainLabels.txt")
         with open(file,'w') as f:
             for button in self.buttonList:
-                f.write("%s,%s\n"%(button.GetId(),button.GetLabel()))
+                f.write("%s,%s\n"%(button.GetId(),button.GetLabel().strip()))
         
         wx.MessageBox('Button names were saved.', 'Saved', wx.OK)
         
@@ -149,7 +149,7 @@ class Manual(wx.Panel):
         with open(file, 'r') as f:
             for i, line in enumerate(f.readlines()):
                 channel, label = line.split(',')
-                self.buttonList[int(channel)-1].SetLabel(label)
+                self.buttonList[int(channel)-1].SetLabel(label.strip())
                 
         e = wx.CommandEvent(wx.EVT_BUTTON.evtType[0], self.renamePanel.button_OK.GetId())
         e.SetEventObject(self.renamePanel.button_OK)
