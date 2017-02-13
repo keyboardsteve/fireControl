@@ -16,7 +16,7 @@ class SerialComs():
         #self.xbee.port = "COM3"  #THIS NEED TO AUTOMATICALLY FIND THE SERIAL DEVICE SOMEHOW...
         serialPorts = lp.comports()
         for port in serialPorts:
-            if "VID:PID=0403:6015" in port.hwid:
+            if "VID:PID=0403:6015" in port.hwid: #The PID number in this line may be overkill.  We probably dont need to compare that
                 self.xbee.port = port.device
                 break
         self.xbee.open()

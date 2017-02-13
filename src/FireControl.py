@@ -7,6 +7,7 @@ from wx.lib.pubsub import pub
 import gettext
 import time
 import os
+import threading
 
 import SerialComs # For xbee connection
 
@@ -62,7 +63,8 @@ class FireControlFrame(wx.Frame):
         self.operatingMode = self.panel_OperatingMode.operatingMode
         self.FireControl_Frame_statusbar = self.CreateStatusBar(3)
         
-        self.testAllRoutine = TestAll.TestAll(self, self.panel_Manual.buttonList)
+        self.testAllEvent = threading.Event()
+        self.testAllRoutine = TestAll.TestAll(self, self.panel_Manual.buttonList, self.testAllEvent)
         
         self.__set_properties()
         self.__do_layout()
@@ -181,9 +183,11 @@ class FireControlFrame(wx.Frame):
             ###ADDCODE
             # This need to send the proper message and receive a result before moving onto the next test
             if self.remoteOperatingMode == "Test":
+                self.testAllEvent.clear()
                 if self.testAllRoutine.is_alive():
                     self.testAllRoutine._stop.set()
-                self.testAllRoutine = TestAll.TestAll(self, self.panel_Manual.buttonList)
+                self.testAllRoutine = TestAll.TestAll(self, self.panel_Manual.buttonList, self.testAllEvent)
+                
                 self.testAllRoutine.start()
                 '''
                 for channel in range(1, self.numberFireChannels + 1):
@@ -350,6 +354,7 @@ class FireControlFrame(wx.Frame):
             self.writeToRxLog("Channel fired: %s"%(channel))
             if self.operatingMode == "Test":
                 self.testAllRoutine.setResult(msg)
+                self.testAllEvent.set()
                 if status == "1":
                     self.panel_Manual.buttonList[int(channel)-1].SetBackgroundColour(wx.NamedColour("Green"))
                     #self.testList[int(channel)-1] = True
