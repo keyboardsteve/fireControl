@@ -1,5 +1,4 @@
 import wx
-from twisted.conch.ssh import channel
 
 class FireTimer(wx.Timer):
     
