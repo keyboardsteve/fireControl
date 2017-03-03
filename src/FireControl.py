@@ -25,7 +25,7 @@ class FireControlFrame(wx.Frame):
         wx.Frame.__init__(self, *args, **kwds)
         
         self.communicationStatus = "Failure"
-        self.numberFireChannels = 10*8
+        self.numberFireChannels = 14*8
         self.manualFireCols = 4
         self.manualFireRows = 4
         self.heartbeatPeriod = 500 # in milliseconds
@@ -331,7 +331,7 @@ class FireControlFrame(wx.Frame):
                 self.communicationStatus = "Failure"
                 self.remoteOperatingMode = "Unknown"
                 self.FireControl_Frame_statusbar.SetStatusText("Communication: %s"%(self.communicationStatus), 0)
-                self.FireControl_Frame_statusbar.SetStatusText("remote Mode: %s"%(self.remoteOperatingMode), 2)
+                self.FireControl_Frame_statusbar.SetStatusText("Remote Mode: %s"%(self.remoteOperatingMode), 2)
                 self.writeToRxLog("Communications with remote lost!")
         elif msg[0] == "R":
             if not self.panel_Diagnostics.checkbox_RxLogFilter.IsChecked():
@@ -353,8 +353,9 @@ class FireControlFrame(wx.Frame):
             status = msg[-1]
             self.writeToRxLog("Channel fired: %s"%(channel))
             if self.operatingMode == "Test":
-                self.testAllRoutine.setResult(msg)
-                self.testAllEvent.set()
+                if self.testAllRoutine.isRunning():
+                    self.testAllRoutine.setResult(msg)
+                    self.testAllEvent.set()
                 if status == "1":
                     self.panel_Manual.buttonList[int(channel)-1].SetBackgroundColour(wx.NamedColour("Green"))
                     #self.testList[int(channel)-1] = True

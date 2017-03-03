@@ -59,6 +59,9 @@ class TestAll(threading.Thread):
     def getResults(self):
         return self.testList
     
+    def isRunning(self):
+        return self.is_alive()
+    
     def reset(self):
         self.testList = []
         self.nextButton = None

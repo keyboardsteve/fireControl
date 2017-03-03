@@ -18,11 +18,11 @@ class SerialComs():
         serialPorts = lp.comports()
         for port in serialPorts:
             if os.name == "nt":
-                if "VID:PID=0403:6015" in port.hwid: #The PID number in this line may be overkill.  We probably dont need to compare that
+                if "VID:PID=0403:" in port.hwid: #The PID number in this line may be overkill.  We probably dont need to compare that
                     self.xbee.port = port.device
                     break
             elif os.name == "posix":
-                if "VID:PID=0403:6015" in port[2]:
+                if "VID:PID=0403:" in port[2]:
                     self.xbee.port = port[0]
                     break
         self.xbee.open()
